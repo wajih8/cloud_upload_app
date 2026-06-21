@@ -53,8 +53,8 @@ project/
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd <project-folder>
+git clone https://github.com/wajih8/cloud_upload_app.git
+cd cloud_upload_app
 ```
 
 ### 2. Install Dependencies
