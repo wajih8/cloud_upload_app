@@ -41,15 +41,15 @@ app.post('/upload-chunk', upload.single('chunk'), async (req, res) => {
 
         const safeFileId = fileId.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-        // Per-upload temp folder: temp/fileId/
+   
         const sessionTempDir = path.join(uploadDir, 'temp', safeFileId);
         await fs.promises.mkdir(sessionTempDir, { recursive: true });
 
-        // Write chunk to disk immediately as chunk_0, chunk_1, chunk_2...
+    
         const chunkPath = path.join(sessionTempDir, `chunk_${currentIdx}`);
         await fs.promises.writeFile(chunkPath, req.file.buffer);
 
-        // Init session in memory
+ 
         if (!uploadSessions[fileId]) {
             uploadSessions[fileId] = {
                 received: 0,
@@ -71,7 +71,7 @@ app.post('/upload-chunk', upload.single('chunk'), async (req, res) => {
             const s = `${Date.now()}-${originalName}`;
             const finalPath = path.join(userDir, s);
 
-            // Read all chunks from disk in order and concat
+            
             const buffers = [];
             for (let i = 0; i < total; i++) {
                 buffers.push(await fs.promises.readFile(path.join(sessionTempDir, `chunk_${i}`)));
