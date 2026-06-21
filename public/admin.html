@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - File Manager</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; margin: 0; }
+        .nav { background: #333; color: white; padding: 15px; display: flex; justify-content: space-between; margin: -20px -20px 20px -20px; }
+        .nav a { color: #aaa; text-decoration: none; font-size: 14px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .user-card { background: white; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .user-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+        .file-list { display: none; padding: 15px; background: #fafafa; border-radius: 0 0 12px 12px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .file-item:last-child { border: none; }
+        .btn-dl { color: white; background: #28a745; text-decoration: none; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+        .badge { background: #007bff; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    <span>🛡️ Admin Panel</span>
+    <a href="/">← Go to Uploader</a>
+</div>
+
+<div class="container">
+    <h2>All Uploads</h2>
+    <div id="userContainer">Loading secure data...</div>
+</div>
+
+<script>
+
+function formatTimestamp(ts) {
+  const d = new Date(ts);
+
+  const pad = n => String(n).padStart(2, '0');
+
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
+         `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+    function check(a){
+        if(a.endsWith(".mp4")){
+                return '<img src="./vid.svg" alt="Girl in a jacket" width="50" height="60"/>'
+            }
+            else{
+                return '<img src="./pic.svg" alt="Girl in a jacket" width="50" height="60"/>'
+            }
+        }
+    async function loadData() {
+        try {
+            const res = await fetch('/api/uploads');
+            if (res.status === 401) {
+                alert("Session expired. Please refresh.");
+                return;
+            }
+            const grouped = await res.json();
+            console.log(grouped)
+            
+            
+
+            const container = document.getElementById('userContainer');
+            container.innerHTML = Object.keys(grouped).length === 0 ? "No uploads yet." : "";
+
+            for (const user in grouped) {
+                const uploads = grouped[user];
+                const card = document.createElement('div');
+                card.className = 'user-card';
+                card.innerHTML = `
+                    <div class="user-header" onclick="toggle(this)">
+                        <strong>👤 ${user}</strong>
+                        <div>
+                            <span class="badge">${uploads.length} files</span>
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        ${uploads.map(f => `
+                            <div class="file-item">
+                                <div>
+                                    <div style="font-weight:bold;">${f.file.originalName || f.file}</div>
+                                    <div>
+                                ${check(f.file)}
+                                </div>
+                                    <small style="color:#888">${f.timestamp.split('T')[0]}</small>
+                                </div>
+                                <a href="/uploads/${f.file.filename || f.file}" class="btn-dl" download>Download</a>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            }
+        } catch (e) {
+            container.innerHTML = "Error loading data.";
+        }
+    }
+
+    function toggle(el) {
+        const list = el.nextElementSibling;
+        list.style.display = list.style.display === 'block' ? 'none' : 'block';
+    }
+
+    loadData();
+</script>
+</body>
+</html>

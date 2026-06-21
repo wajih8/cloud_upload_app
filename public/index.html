@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Uploader</title>
+    <style>
+        /* Modern Mobile-First CSS */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+        h2 { margin-top: 0; color: #333; }
+        
+        /* The File Input Styling */
+        .upload-area { border: 2px dashed #007bff; border-radius: 12px; padding: 40px 20px; background: #f9fbff; cursor: pointer; transition: 0.2s; position: relative; }
+        .upload-area:hover { background: #eef4ff; }
+        .upload-area input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
+        .icon { font-size: 40px; color: #007bff; margin-bottom: 10px; display: block; }
+        
+        /* Button */
+        button { background: #007bff; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        
+        /* Progress Bar */
+        .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 8px; margin-top: 20px; height: 10px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; width: 0%; background-color: #28a745; transition: width 0.2s; }
+        
+        #status { margin-top: 15px; font-size: 14px; color: #666; }
+        .file-list { margin-top: 15px; text-align: left; font-size: 13px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div id="nameSection">
+            <h2>Welcome</h2>
+            <p style="color:#666;">Please enter your name to start uploading.</p>
+            <input type="text" id="uploaderName" placeholder="Enter your name" 
+                   style="width: 90%; padding: 15px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 10px; font-size: 16px;">
+            <button onclick="showUploadSection()">Continue</button>
+        </div>
+    
+        <div id="uploadSection" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <button onclick="showNameSection()" style="width: auto; margin: 0; padding: 5px 10px; background: #6c757d; font-size: 12px;">← Change Name</button>
+                <span id="displayName" style="font-weight: bold; color: #007bff;"></span>
+            </div>
+            
+            <h2>Upload Files</h2>
+            <p style="color:#666; margin-bottom: 20px;">Chunked Upload (Max 400MB)</p>
+            
+            <div class="upload-area">
+                <span class="icon">☁️</span>
+                <strong>Tap to Select</strong> or Drag Files
+                <input type="file" id="fileInput" name="files" multiple accept="image/*,video/*">
+            </div>
+    
+            <div class="file-list" id="fileList"></div>
+    
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+    
+            <button id="uploadBtn" onclick="startChunkedUpload()">Upload Now</button>
+            <div id="status"></div>
+        </div>
+    </div>
+    
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const status = document.getElementById('status');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const uploadBtn = document.getElementById('uploadBtn');
+    
+        // UI Logic
+        function showUploadSection() {
+            if(!document.getElementById('uploaderName').value.trim()) return alert("Enter Name");
+            document.getElementById('nameSection').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('displayName').innerText = "User: " + document.getElementById('uploaderName').value;
+        }
+        function showNameSection() {
+            document.getElementById('nameSection').style.display = 'block';
+            document.getElementById('uploadSection').style.display = 'none';
+        }
+    
+        fileInput.addEventListener('change', () => {
+            fileList.innerHTML = '';
+            Array.from(fileInput.files).forEach(f => {
+                fileList.innerHTML += `<div>📄 ${f.name} (${(f.size/1024/1024).toFixed(2)} MB)</div>`;
+            });
+        });
+    
+        // UPLOAD LOGIC
+        async function startChunkedUpload() {
+            const files = fileInput.files;
+            const name = document.getElementById('uploaderName').value;
+            if (!files.length) return alert("Select files");
+    
+            uploadBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            status.innerText = "Starting...";
+    
+            const CHUNK_SIZE = 1024 * 1024; // 1MB
+            let totalBytes = 0;
+            let uploadedGlobal = 0;
+            for(let f of files) totalBytes += f.size;
+    
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    // Stable ID: Same file + same size = Same ID (Allows consistency)
+                    const uniqueId = `${file.name}-${file.size}-${file.lastModified}`;
+                    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                    let start = 0;
+    
+                    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                        const end = Math.min(start + CHUNK_SIZE, file.size);
+                        const chunk = file.slice(start, end);
+                        
+                        const formData = new FormData();
+                        formData.append('chunk', chunk);
+                        formData.append('chunkIndex', chunkIndex);
+                        formData.append('totalChunks', totalChunks);
+                        formData.append('originalName', file.name);
+                        formData.append('userName', name);
+                        formData.append('fileId', uniqueId);
+    
+                        // Retry Logic: Try 3 times before failing
+                        let attempts = 0;
+                        let success = false;
+                        while(attempts < 3 && !success) {
+                            try {
+                                await uploadChunk(formData);
+                                success = true;
+                            } catch(e) {
+                                attempts++;
+                                console.log(`Retrying chunk ${chunkIndex}... (${attempts}/3)`);
+                                await new Promise(r => setTimeout(r, 1000)); // Wait 1s
+                            }
+                        }
+    
+                        if(!success) throw new Error("Connection failed after 3 retries");
+    
+                        uploadedGlobal += chunk.size;
+                        progressBar.style.width = ((uploadedGlobal / totalBytes) * 100) + '%';
+                        status.innerText = `Uploading ${file.name}: ${Math.round((chunkIndex/totalChunks)*100)}%`;
+                        
+                        start = end;
+                    }
+                }
+                status.innerText = "✅ Upload Success!";
+                status.style.color = "green";
+                fileInput.value = '';
+                fileList.innerHTML = '';
+            } catch (err) {
+                status.innerText = "❌ Error: " + err.message;
+                status.style.color = "red";
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+    
+        function uploadChunk(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload-chunk', true);
+                xhr.onload = () => xhr.status === 200 ? resolve() : reject();
+                xhr.onerror = () => reject();
+                xhr.send(formData);
+            });
+        }
+    </script>
+</body>
+</html>
