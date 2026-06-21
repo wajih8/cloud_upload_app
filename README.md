@@ -116,7 +116,7 @@ uploads.json
     "uploader": "Wajih1",
     "ip": "::ffff:192.168.1.23",
     "file": "1779909968708-1000050578.jpg",
-    "path": "D:\\my-upload-app\\public\\uploads\\Wajih1\\1779909968708-1000050578.jpg",
+    "path": "public\\uploads\\Wajih1\\1779909968708-1000050578.jpg",
     "timestamp": "2026-05-27T19:26:08.709Z",
     "originalName": "1000050578.jpg"
   },
